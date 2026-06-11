@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>File to QR Code Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9;}
+        #qrcode-container { margin-top: 20px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>แปลงไฟล์เป็น QR Code (เวอร์ชันทดสอบ)</h2>
+    <input type="file" id="fileInput" accept="image/*,video/*,audio/*">
+    <button id="uploadBtn" onclick="uploadAndGenerate()">สร้าง QR Code</button>
+
+    <div id="qrcode-container">
+        <canvas id="qrcode"></canvas>
+    </div>
+
+    <script>
+        async function uploadAndGenerate() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) {
+                alert('กรุณาเลือกไฟล์ก่อนครับ');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const btn = document.getElementById('uploadBtn');
+            btn.innerText = "กำลังอัปโหลดไฟล์... (รอสักครู่)";
+            btn.disabled = true;
+
+            try {
+                // 1. ยิง API ส่งไฟล์ไปเก็บที่ file.io ชั่วคราว
+                const response = await fetch('https://file.io', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // 2. นำ URL จริงที่ API ส่งกลับมา สร้างเป็น QR Code
+                    const qr = new QRious({
+                        element: document.getElementById('qrcode'),
+                        value: result.link,
+                        size: 250
+                    });
+                    
+                    alert('สำเร็จ! ลองเอามือถือสแกน QR Code ดูได้เลยครับ');
+                } else {
+                    alert('อัปโหลดไม่สำเร็จ: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+            } finally {
+                // คืนค่าปุ่มกลับมาเหมือนเดิม
+                btn.innerText = "สร้าง QR Code";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
