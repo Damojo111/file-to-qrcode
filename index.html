@@ -2,30 +2,146 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>File to QR Code Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FILE|QR Converter - Professional Dashboard Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9;}
-        #qrcode-container { margin-top: 20px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;}
-        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        :root {
+            --bg-main: #14151a;
+            --bg-card: #1c1e26;
+            --bg-sidebar: #1a1c24;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent-color: #00acff; /* สีฟ้าสดใสสไตล์ แดชบอร์ด */
+            --accent-active: #007bff;
+            --success-color: #28a745;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-main); color: var(--text-primary); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+        /* Sidebar สไตล์image_5.png */
+        .sidebar { width: 240px; background-color: var(--bg-sidebar); padding: 30px 20px; display: flex; flex-direction: column; position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid rgba(255,255,255,0.05); z-index: 100; }
+        .sidebar-logo { font-size: 24px; font-weight: bold; color: var(--accent-color); margin-bottom: 50px; display: flex; align-items: center; }
+        .sidebar-logo i { margin-right: 10px; }
+        .sidebar-menu { list-style: none; flex-grow: 1; }
+        .sidebar-menu li { margin-bottom: 20px; }
+        .sidebar-menu li a { text-decoration: none; color: var(--text-secondary); font-size: 16px; display: flex; align-items: center; padding: 12px 15px; border-radius: var(--border-radius); transition: var(--transition); }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { color: #fff; background-color: rgba(255,255,255,0.05); }
+        .sidebar-menu li a.active { background-color: rgba(0, 172, 255, 0.1); color: var(--accent-color); }
+        .sidebar-menu li a i { margin-right: 15px; font-size: 18px; width: 20px; text-align: center; }
+        .sidebar-footer { font-size: 14px; color: var(--text-secondary); text-align: center; }
+
+        /* Main Content */
+        .main-content { margin-left: 240px; padding: 40px; width: calc(100% - 240px); }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; }
+        .header-title { font-size: 28px; font-weight: 600; color: #fff; }
+        .header-user { display: flex; align-items: center; color: var(--text-secondary); }
+        .header-user img { width: 40px; height: 40px; border-radius: 50%; margin-left: 15px; }
+
+        /* Card Section */
+        .dashboard-container { display: flex; flex-direction: column; gap: 30px; }
+        .card { background-color: var(--bg-card); padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,0.02); }
+        .card-header { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 20px; display: flex; align-items: center; }
+        .card-header i { color: var(--accent-color); margin-right: 10px; }
+
+        /* Upload Container */
+        #upload-section .card-content { display: flex; flex-direction: column; gap: 20px; }
+        .file-input-wrapper { display: flex; flex-direction: column; gap: 10px; }
+        input[type="file"] { background-color: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: var(--text-primary); padding: 10px 15px; border-radius: 8px; cursor: pointer; transition: var(--transition); }
+        input[type="file"]:hover { border-color: rgba(255,255,255,0.1); }
+        button { padding: 12px 24px; font-size: 16px; font-weight: 600; color: white; background-color: var(--accent-color); border: none; border-radius: var(--border-radius); cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        button:hover { background-color: var(--accent-active); }
+        button:disabled { background-color: #555; cursor: not-allowed; opacity: 0.7; }
+
+        /* Result Section */
+        #result-section { display: none; margin-top: 30px; }
+        #result-section .card-content { display: flex; flex-direction: column; align-items: center; gap: 25px; }
+        .qr-placeholder { background-color: #f0f0f0; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #link-container { text-align: center; }
+        #link-text { color: var(--success-color); font-weight: bold; font-size: 16px; margin-bottom: 10px; display: block; word-break: break-all; }
+        #link-container a { color: var(--text-primary); text-decoration: none; border-bottom: 1px solid transparent; transition: var(--transition); }
+        #link-container a:hover { border-bottom-color: var(--text-primary); }
+        .action-buttons { display: flex; gap: 15px; width: 100%; justify-content: center; }
+        .download-btn { background-color: #6c757d; } /* สีเทาสำหรับปุ่มรอง */
+        .download-btn:hover { background-color: #5a6268; }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar { width: 70px; padding: 30px 10px; }
+            .sidebar-logo, .sidebar-menu li a span, .sidebar-footer { display: none; }
+            .sidebar-menu li a { justify-content: center; padding: 12px; }
+            .sidebar-menu li a i { margin-right: 0; font-size: 22px; }
+            .main-content { margin-left: 70px; width: calc(100% - 70px); }
+        }
     </style>
 </head>
 <body>
 
-    <h2>แปลงไฟล์เป็น QR Code (เวอร์ชันใช้งานจริง)</h2>
-    <input type="file" id="fileInput" accept="image/*,video/*,audio/*">
-    <button id="uploadBtn" onclick="uploadAndGenerate()">อัปโหลดและสร้าง QR Code</button>
+    <aside class="sidebar">
+        <div class="sidebar-logo"><i class="fas fa-qrcode"></i>FILE<span>|</span>QR</div>
+        <ul class="sidebar-menu">
+            <li><a href="#" class="active"><i class="fas fa-file-upload"></i><span>สร้าง QR Code</span></a></li>
+            <li><a href="#"><i class="fas fa-history"></i><span>ประวัติการสร้าง</span></a></li>
+            <li><a href="#"><i class="fas fa-cog"></i><span>ตั้งค่า</span></a></li>
+        </ul>
+        <div class="sidebar-footer">&copy; 2026 FILE|QR</div>
+    </aside>
 
-    <div id="qrcode-container">
-        <canvas id="qrcode"></canvas>
-    </div>
-    
-    <p id="link-text" style="margin-top: 20px; font-weight: bold; word-break: break-all;"></p>
+    <main class="main-content">
+        <header>
+            <div class="header-title">แดชบอร์ดแปลงไฟล์</div>
+            <div class="header-user">
+                <span>Azra Akhi</span>
+                <img src="https://via.placeholder.com/40" alt="Profile">
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <section id="upload-section" class="card">
+                <div class="card-header"><i class="fas fa-cloud-upload-alt"></i>1. อัปโหลดไฟล์</div>
+                <div class="card-content">
+                    <p style="color: var(--text-secondary); font-size: 14px;">รองรับ รูปภาพ, วิดีโอ, เสียง (แนะนำไม่เกิน 100MB สำหรับการอัปโหลดที่รวดเร็ว)</p>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="fileInput" accept="image/*,video/*,audio/*">
+                    </div>
+                    <button id="uploadBtn" onclick="uploadAndGenerate()">
+                        <i class="fas fa-magic"></i> อัปโหลดและสร้าง QR Code
+                    </button>
+                </div>
+            </section>
+
+            <section id="result-section" class="card">
+                <div class="card-header"><i class="fas fa-check-circle"></i>2. ผลลัพธ์ QR Code</div>
+                <div class="card-content">
+                    <div class="qr-placeholder">
+                        <canvas id="qrcode"></canvas>
+                    </div>
+                    <div id="link-container">
+                        <span id="link-text"></span>
+                        <a href="#" id="fileUrl" target="_blank" style="display:none;">(คลิกเพื่อดูไฟล์)</a>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="download-btn" id="downloadBtn" onclick="downloadQRCode()" style="display:none;">
+                            <i class="fas fa-download"></i> ดาวน์โหลด QR Code
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
 
     <script>
         async function uploadAndGenerate() {
             const fileInput = document.getElementById('fileInput');
+            const resultSection = document.getElementById('result-section');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+
             if (fileInput.files.length === 0) {
                 alert('กรุณาเลือกไฟล์ก่อนครับ');
                 return;
@@ -33,9 +149,9 @@
 
             const file = fileInput.files[0];
             
-            // ป้องกันไฟล์ใหญ่เกินไป ทำให้รอนาน
-            if(file.size > 50 * 1024 * 1024) {
-                alert('ไฟล์มีขนาดใหญ่เกินไป (แนะนำไม่เกิน 50MB เพื่อความรวดเร็วครับ)');
+            // เช็คขนาดไฟล์ (Catbox anon accepts 200MB, but let's check 100MB for concept)
+            if(file.size > 100 * 1024 * 1024) {
+                alert('ไฟล์มีขนาดใหญ่เกินไปครับ (แนะนำไม่เกิน 100MB)');
                 return;
             }
 
@@ -44,30 +160,41 @@
             formData.append('reqtype', 'fileupload');
             formData.append('fileToUpload', file);
 
-            const btn = document.getElementById('uploadBtn');
-            btn.innerText = "กำลังอัปโหลดไฟล์... (รอสักครู่นะครับ)";
-            btn.disabled = true;
+            uploadBtn.innerText = "กำลังอัปโหลดไฟล์... (รอสักครู่นะครับ)";
+            uploadBtn.disabled = true;
+            resultSection.style.display = 'none';
 
             try {
-                // ยิง API ไปที่ Catbox (ไม่ติดปัญหา CORS)
+                // ยิง API ไปที่ Catbox (ไม่มีปัญหา CORS)
                 const response = await fetch('https://catbox.moe/user/api.php', {
                     method: 'POST',
                     body: formData
                 });
                 
-                // API ของ Catbox จะส่งลิงก์ URL จริงๆ กลับมาเป็นข้อความตรงๆ
+                // API ส่งลิงก์ URL จริงกลับมาเป็น text ตรงๆ
                 const fileUrl = await response.text();
 
                 if (fileUrl.startsWith('https://')) {
-                    // นำ URL จริงมาสร้างเป็น QR Code
+                    // แสดง Result Section
+                    resultSection.style.display = 'block';
+                    
+                    // เจน QR Code
                     const qr = new QRious({
                         element: document.getElementById('qrcode'),
                         value: fileUrl,
-                        size: 250
+                        size: 250, // ขนาดใหญ่ขึ้นนิดหน่อยเพื่อความคมชัด
+                        level: 'H' // High error correction เพื่อให้ทนต่อการเบลอ
                     });
                     
-                    // แสดงลิงก์บนหน้าจอเผื่อคลิก
-                    document.getElementById('link-text').innerHTML = `อัปโหลดสำเร็จ! <br><br> <a href="${fileUrl}" target="_blank">คลิกเพื่อดูไฟล์: ${fileUrl}</a>`;
+                    // แสดงลิงก์บนหน้าจอ
+                    document.getElementById('link-text').innerText = `อัปโหลดสำเร็จ!`;
+                    const fileUrlA = document.getElementById('fileUrl');
+                    fileUrlA.href = fileUrl;
+                    fileUrlA.innerText = fileUrl;
+                    fileUrlA.style.display = 'block';
+
+                    // แสดงปุ่มดาวน์โหลด
+                    downloadBtn.style.display = 'flex';
                     
                 } else {
                     alert('อัปโหลดไม่สำเร็จ โปรดลองอีกครั้งครับ');
@@ -76,10 +203,24 @@
                 console.error('Error:', error);
                 alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
             } finally {
-                // คืนค่าปุ่มกลับมาเหมือนเดิม
-                btn.innerText = "อัปโหลดและสร้าง QR Code";
-                btn.disabled = false;
+                uploadBtn.innerText = "อัปโหลดและสร้าง QR Code";
+                uploadBtn.disabled = false;
             }
+        }
+
+        function downloadQRCode() {
+            const canvas = document.getElementById('qrcode');
+            
+            // แปลง canvas เป็น base64 data URL
+            const dataUrl = canvas.toDataURL('image/png');
+            
+            // สร้าง element <a download> เสมือนเพื่อจำลองการคลิกดาวน์โหลด
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = 'file-qr-code.png'; // ตั้งชื่อไฟล์ที่ต้องการดาวน์โหลด
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
