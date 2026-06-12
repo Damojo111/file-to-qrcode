@@ -7,18 +7,21 @@
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9;}
         #qrcode-container { margin-top: 20px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px;}
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <h2>แปลงไฟล์เป็น QR Code (เวอร์ชันทดสอบ)</h2>
+    <h2>แปลงไฟล์เป็น QR Code (เวอร์ชันใช้งานจริง)</h2>
     <input type="file" id="fileInput" accept="image/*,video/*,audio/*">
-    <button id="uploadBtn" onclick="uploadAndGenerate()">สร้าง QR Code</button>
+    <button id="uploadBtn" onclick="uploadAndGenerate()">อัปโหลดและสร้าง QR Code</button>
 
     <div id="qrcode-container">
         <canvas id="qrcode"></canvas>
     </div>
+    
+    <p id="link-text" style="margin-top: 20px; font-weight: bold; word-break: break-all;"></p>
 
     <script>
         async function uploadAndGenerate() {
@@ -29,39 +32,52 @@
             }
 
             const file = fileInput.files[0];
+            
+            // ป้องกันไฟล์ใหญ่เกินไป ทำให้รอนาน
+            if(file.size > 50 * 1024 * 1024) {
+                alert('ไฟล์มีขนาดใหญ่เกินไป (แนะนำไม่เกิน 50MB เพื่อความรวดเร็วครับ)');
+                return;
+            }
+
+            // เตรียมข้อมูลส่งไปที่ Catbox API
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('reqtype', 'fileupload');
+            formData.append('fileToUpload', file);
 
             const btn = document.getElementById('uploadBtn');
-            btn.innerText = "กำลังอัปโหลดไฟล์... (รอสักครู่)";
+            btn.innerText = "กำลังอัปโหลดไฟล์... (รอสักครู่นะครับ)";
             btn.disabled = true;
 
             try {
-                // 1. ยิง API ส่งไฟล์ไปเก็บที่ file.io ชั่วคราว
-                const response = await fetch('https://file.io', {
+                // ยิง API ไปที่ Catbox (ไม่ติดปัญหา CORS)
+                const response = await fetch('https://catbox.moe/user/api.php', {
                     method: 'POST',
                     body: formData
                 });
-                const result = await response.json();
+                
+                // API ของ Catbox จะส่งลิงก์ URL จริงๆ กลับมาเป็นข้อความตรงๆ
+                const fileUrl = await response.text();
 
-                if (result.success) {
-                    // 2. นำ URL จริงที่ API ส่งกลับมา สร้างเป็น QR Code
+                if (fileUrl.startsWith('https://')) {
+                    // นำ URL จริงมาสร้างเป็น QR Code
                     const qr = new QRious({
                         element: document.getElementById('qrcode'),
-                        value: result.link,
+                        value: fileUrl,
                         size: 250
                     });
                     
-                    alert('สำเร็จ! ลองเอามือถือสแกน QR Code ดูได้เลยครับ');
+                    // แสดงลิงก์บนหน้าจอเผื่อคลิก
+                    document.getElementById('link-text').innerHTML = `อัปโหลดสำเร็จ! <br><br> <a href="${fileUrl}" target="_blank">คลิกเพื่อดูไฟล์: ${fileUrl}</a>`;
+                    
                 } else {
-                    alert('อัปโหลดไม่สำเร็จ: ' + result.message);
+                    alert('อัปโหลดไม่สำเร็จ โปรดลองอีกครั้งครับ');
                 }
             } catch (error) {
                 console.error('Error:', error);
                 alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
             } finally {
                 // คืนค่าปุ่มกลับมาเหมือนเดิม
-                btn.innerText = "สร้าง QR Code";
+                btn.innerText = "อัปโหลดและสร้าง QR Code";
                 btn.disabled = false;
             }
         }
